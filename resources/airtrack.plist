@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>net.hirogwa.airtrack</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <!-- point to the installed location -->
+      <string>/Library/Frameworks/Python.framework/Versions/3.5/bin/airtrack</string>
+      <string>register</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>LANG</key>
+      <string>en_US.UTF-8</string>
+    </dict>
+
+    <key>StartInterval</key>
+    <integer>60</integer>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/launchctl_airtrack.out</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/launchctl_airtrack.err</string>
+  </dict>
+</plist>

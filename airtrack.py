@@ -1,9 +1,11 @@
 from datetime import datetime
+import click
 import re
 import subprocess
 import sqlite3
 
-DB_PATH = 'airtrack.db'
+import settings
+
 AIR_COMMAND = ('/System/Library/PrivateFrameworks/Apple80211.framework/'
                + 'Versions/Current/Resources/airport')
 
@@ -19,7 +21,22 @@ STATEMENTS = {
                  ' VALUES (NULL, ?, ?)')
 }
 
+DB_PATH = None
 
+
+@click.group()
+@click.option('--debug/--no-debug', default=False)
+def cli(debug):
+    global DB_PATH
+    if debug:
+        click.echo('Running airtrack with debug mode')
+        DB_PATH = settings.DB_PATH_DEBUG
+    else:
+        DB_PATH = settings.DB_PATH
+    click.echo('Using database at {}'.format(DB_PATH))
+
+
+@cli.command()
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
@@ -27,11 +44,17 @@ def init_db():
         cur.execute(STATEMENTS['create_index_timestamp'])
 
 
-def register_current_airport():
+@cli.command()
+def register():
     entry = get_current_airplay()
     if entry:
         with sqlite3.connect(DB_PATH) as conn:
-            register(conn, *entry)
+            register_current_airport(conn, *entry)
+
+
+def register_current_airport(conn, timestamp, ssid):
+    cur = conn.cursor()
+    cur.execute(STATEMENTS['register'], (timestamp, ssid))
 
 
 def get_current_airplay():
@@ -44,16 +67,3 @@ def get_current_airplay():
     else:
         print('No SSID identified')
         return None
-
-
-def register(conn, timestamp, ssid):
-    cur = conn.cursor()
-    cur.execute(STATEMENTS['register'], (timestamp, ssid))
-
-
-def airtrack():
-    register_current_airport()
-    # init_db()
-
-if __name__ == '__main__':
-    airtrack()
