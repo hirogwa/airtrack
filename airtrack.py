@@ -33,8 +33,9 @@ HELP = {
 DB_PATH = None
 
 TIME_FORMAT_MIN = '%Y-%m-%d %H:%M'
-time_string_full = lambda x: x.isoformat(' ')
+TIME_FORMAT_SEC = '%Y-%m-%d %H:%M:%S'
 time_string_minute = lambda x: x.strftime(TIME_FORMAT_MIN)
+time_string_second = lambda x: x.strftime(TIME_FORMAT_SEC)
 
 
 @click.group()
@@ -159,8 +160,8 @@ def sum_up(from_time, to_time, datapoint_size, ssid, output=True):
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
         rs = cur.execute(STATEMENTS['count_by_ssid'], (
-            time_string_full(from_time),
-            time_string_full(to_time),
+            time_string_second(from_time),
+            time_string_second(to_time),
             ssid))
         row = rs.fetchone()
         datapoint_count = row[0]
@@ -179,7 +180,7 @@ def sum_up(from_time, to_time, datapoint_size, ssid, output=True):
 def register_current_airport(conn, timestamp, ssid):
     cur = conn.cursor()
     cur.execute(STATEMENTS['register'],
-                (time_string_full(timestamp), ssid))
+                (time_string_second(timestamp), ssid))
 
 
 def get_current_ssid():
