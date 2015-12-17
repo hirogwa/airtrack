@@ -21,7 +21,9 @@ STATEMENTS = {
                  ' VALUES (NULL, ?, ?)'),
     'count_by_ssid': ('select count(1) from airport_checkin' +
                       '  where timestamp between ? and ?' +
-                      '  and ssid = ?')
+                      '  and ssid = ?'),
+    'count_by_timestamp': ('select count(1) from airport_checkin' +
+                           '  where timestamp = ?')
 }
 
 HELP = {
@@ -62,16 +64,46 @@ def init_db():
 
 
 @cli.command()
-def register():
+@click.option('-b', '--bulk/--no-bulk', default=False,
+              help='Register a range.')
+@click.option('-s', '--since')
+@click.option('-t', '--till', default=datetime.now().strftime(TIME_FORMAT_MIN))
+@click.option('-p', '--datapoint-size', default=1, help=HELP['datapoint_size'])
+def register(bulk, since, till, datapoint_size):
     '''
     Registers the current airport connection entry.
     '''
+    if bulk:
+        if not since:
+            click.echo('--since parameter is required in bulk mode', err=True)
+            return
+
     ssid = get_current_ssid()
-    if ssid:
+    if not ssid:
+        click.echo("You don't seem to be on any network")
+        return
+
+    if bulk:
+        delta = timedelta(minutes=datapoint_size)
+        from_time = datetime.strptime(since, TIME_FORMAT_MIN)
+        to_time = datetime.strptime(till, TIME_FORMAT_MIN)
         with sqlite3.connect(DB_PATH) as conn:
-            register_current_airport(conn, datetime.now(), ssid)
+            inserted, skipped = register_airport_range(
+                conn, from_time, to_time, delta, ssid)
+        m_str = lambda x: '{} {}'.format(x, 'minute' if x == 1 else 'minutes')
+        click.echo(
+            '{} to {} by {} on network {}: {} registered, {} skipped'
+            .format(since, till, m_str(datapoint_size),
+                    ssid, inserted, skipped))
+
     else:
-        click.echo('No SSID identified')
+        target_time = datetime.now()
+        with sqlite3.connect(DB_PATH) as conn:
+            inserted = register_airport(conn, target_time, ssid, True)
+        click.echo(
+            '{} on network {}: {} registered, {} skipped'
+            .format(target_time.strftime(TIME_FORMAT_SEC), ssid,
+                    int(inserted), int(not inserted)))
 
 
 @cli.command()
@@ -177,10 +209,29 @@ def sum_up(from_time, to_time, datapoint_size, ssid, output=True):
     return h, m
 
 
-def register_current_airport(conn, timestamp, ssid):
+def register_airport(conn, timestamp, ssid, skip_dupl=False):
     cur = conn.cursor()
-    cur.execute(STATEMENTS['register'],
-                (time_string_second(timestamp), ssid))
+    time_str = time_string_second(timestamp)
+    if skip_dupl:
+        rs = cur.execute(STATEMENTS['count_by_timestamp'], (time_str,))
+        row = rs.fetchone()
+        if row[0] > 0:
+            return False
+
+    cur.execute(STATEMENTS['register'], (time_str, ssid))
+    return True
+
+
+def register_airport_range(conn, from_time, to_time, delta, ssid):
+    insert_count, skip_count = 0, 0
+    target_time = from_time
+    while target_time < to_time:
+        if register_airport(conn, target_time, ssid, skip_dupl=True):
+            insert_count += 1
+        else:
+            skip_count += 1
+        target_time += delta
+    return insert_count, skip_count
 
 
 def get_current_ssid():
