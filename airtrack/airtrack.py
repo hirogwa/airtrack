@@ -4,7 +4,7 @@ import re
 import subprocess
 import sqlite3
 
-import settings
+from airtrack import settings
 
 AIR_COMMAND = ('/System/Library/PrivateFrameworks/Apple80211.framework/'
                + 'Versions/Current/Resources/airport')
