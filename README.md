@@ -33,4 +33,4 @@ $ launchctl unload ~/Library/LaunchAgents/net.hirogwa.airtrack.plist
 ```
 
 ## license
-Released under [MIT] (http://opensource.org/licenses/MIT)
+Released under [MIT](http://opensource.org/licenses/MIT)
